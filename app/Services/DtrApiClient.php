@@ -143,6 +143,7 @@ class DtrApiClient
     {
         return Http::baseUrl(rtrim((string) config('dtr.api_base_url'), '/'))
             ->timeout((int) config('dtr.api_timeout', 300))
+            ->withToken($this->buildJwtToken())
             ->acceptJson()
             ->asJson()
             ->throw(function ($response, RequestException $exception) {
@@ -152,5 +153,41 @@ class DtrApiClient
             ->retry(1, 250, function ($exception) {
                 return $exception instanceof ConnectionException;
             });
+    }
+
+    private function buildJwtToken(): string
+    {
+        $secret = trim((string) config('dtr.api_jwt_key', ''));
+        if ($secret === '') {
+            throw new RuntimeException('DTR_API_JWT_KEY is required to call the protected API.');
+        }
+
+        $issuer = (string) config('dtr.api_jwt_issuer', 'IOT-API');
+        $audience = (string) config('dtr.api_jwt_audience', 'IOT-Client');
+        $subject = (string) config('dtr.api_jwt_subject', 'laravel-dtr');
+        $expirationMinutes = max(1, (int) config('dtr.api_jwt_expiration_minutes', 60));
+        $now = time();
+
+        $header = ['alg' => 'HS256', 'typ' => 'JWT'];
+        $payload = [
+            'iss' => $issuer,
+            'aud' => $audience,
+            'sub' => $subject,
+            'iat' => $now,
+            'nbf' => $now,
+            'exp' => $now + ($expirationMinutes * 60),
+            'jti' => bin2hex(random_bytes(16)),
+        ];
+
+        $headerSegment = $this->base64UrlEncode(json_encode($header, JSON_THROW_ON_ERROR));
+        $payloadSegment = $this->base64UrlEncode(json_encode($payload, JSON_THROW_ON_ERROR));
+        $signature = hash_hmac('sha256', $headerSegment . '.' . $payloadSegment, $secret, true);
+
+        return $headerSegment . '.' . $payloadSegment . '.' . $this->base64UrlEncode($signature);
+    }
+
+    private function base64UrlEncode(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
     }
 }

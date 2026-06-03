@@ -38,7 +38,7 @@
     @endif
 
     @if (session('error') || $errorMessage)
-        <div class="flash flash--error">{{ session('error') ?? $errorMessage }}</div>
+        <div class="flash flash--error">{{ session('error') ?? "Error :P" }}</div>
     @endif
 
     <section class="panel panel--filters">

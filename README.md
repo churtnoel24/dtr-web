@@ -1,58 +1,233 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Laravel-Used REST API Starter
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This document covers only the API routes that the Laravel DTR app calls from `app/Services/DtrApiClient.php`.
 
-## About Laravel
+It is meant to be a starter that you can edit and expand later.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Base URL
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Set this in Laravel with `DTR_API_BASE_URL`.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Example:
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```text
+https://dtr2026-read.iamlance.site
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Authentication
 
-## Contributing
+Every request uses a shared JWT bearer token.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Required headers:
 
-## Code of Conduct
+```http
+Authorization: Bearer <jwt>
+Accept: application/json
+Content-Type: application/json
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Match these values between the API and Laravel:
 
-## Security Vulnerabilities
+- API secret: `Jwt__Key` in `conn.env` or environment variables
+- Laravel secret: `DTR_API_JWT_KEY`
+- Issuer: `Jwt:Issuer` / `DTR_API_JWT_ISSUER`
+- Audience: `Jwt:Audience` / `DTR_API_JWT_AUDIENCE`
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+No login endpoint is used yet.
 
-## License
+## Endpoint Summary
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Laravel method | HTTP | Route | Purpose |
+| --- | --- | --- | --- |
+| `getStatuses()` | `GET` | `/api/TblEmpstatus` | Load employee status options |
+| `getOffices()` | `GET` | `/api/SdoOffice` | Load office options |
+| `getBios()` | `GET` | `/api/TblBio` | Load employee bio records used by the DTR template |
+| `getSignatories()` | `GET` | `/api/TblSchoolSignatories` | Load signatory names and designations |
+| `searchLogs()` | `GET` | `/api/TblLogs/search-by-filters` | Load monthly logs for the DTR preview |
+
+## Endpoint Details
+
+### 1. `GET /api/TblEmpstatus`
+
+Used by Laravel to populate status dropdowns.
+
+Response example:
+
+```json
+[
+  {
+    "sId": 1,
+    "sEmp": "CASUAL"
+  }
+]
+```
+
+Laravel uses:
+
+- `sId`
+- `sEmp`
+
+---
+
+### 2. `GET /api/SdoOffice`
+
+Used by Laravel to populate office dropdowns.
+
+Response example:
+
+```json
+[
+  {
+    "officeId": 3,
+    "officeOsId": 502678,
+    "officeName": "BANGAL INTEGRATED SCHOOL"
+  }
+]
+```
+
+Laravel uses:
+
+- `officeId`
+- `officeOsId`
+- `officeName`
+
+The API may return extra office fields too, but Laravel does not currently use them.
+
+---
+
+### 3. `GET /api/TblBio`
+
+Used by Laravel to build the DTR preview and report rows.
+
+Response example:
+
+```json
+[
+  {
+    "bId": 1,
+    "bGuid": "2376D9BF-1CCE-45CF-B3FF-FABA04894F20",
+    "bFirstname": "JUAN",
+    "bLastname": "DELA CRUZ",
+    "bDesignation": "TEACHER I",
+    "bOfficeId": 107141,
+    "bMacId": 300,
+    "bHrsAmIn": "08:00",
+    "bHrsAmOut": "12:00",
+    "bHrsPmIn": "13:00",
+    "bHrsPmOut": "17:00",
+    "bSignatories": "48", // foreign key from signatories table
+    "bUnit": "21", //foreign key from header1 table
+    "bJobStatus": "Permanent",
+    "bIsGlobal": false,
+    "bIsActive": true
+  }
+]
+```
+
+Laravel uses these fields:
+
+- `bId`
+- `bGuid`
+- `bFirstname`
+- `bLastname`
+- `bDesignation`
+- `bOfficeId`
+- `bMacId`
+- `bHrsAmIn`
+- `bHrsAmOut`
+- `bHrsPmIn`
+- `bHrsPmOut`
+- `bSignatories`
+- `bUnit`
+- `bJobStatus`
+- `bIsGlobal`
+- `bIsActive`
+
+---
+
+### 4. `GET /api/TblSchoolSignatories`
+
+Used by Laravel to map signatory names to designations in the report.
+
+Response example:
+
+```json
+[
+  {
+    "fldId": 1,
+    "fldPname": "Jane Doe",
+    "fldPdesignation": "SCHOOL PRINCIPAL II"
+  }
+]
+```
+
+Laravel uses:
+
+- `fldId`
+- `fldPname`
+- `fldPdesignation`
+
+---
+
+### 5. `GET /api/TblLogs/search-by-filters`
+
+Used by Laravel to load logs for the selected month, office, and MAC ID.
+It is also used repeatedly for the global-log flow.
+
+Query parameters:
+
+- `year` - optional, but required when `month` is provided
+- `month` - optional, 1 to 12
+- `fldOfficeId` - optional
+- `fldMacId` - optional
+
+Validation rules:
+
+- At least one filter must be provided
+- `month` requires `year`
+- `year` must be between `1` and `9999`
+- `month` must be between `1` and `12`
+
+Request example:
+
+```http
+GET /api/TblLogs/search-by-filters?year=2026&month=3&fldOfficeId=1&fldMacId=11
+```
+
+Response example:
+
+```json
+[
+  {
+    "fldId": 2584309,
+    "fldMacId": "11",
+    "fldDatetime": "2026-03-26 18:00:09",
+    "fldLog": "LOGOUT:PM",
+    "fldOfficeId": "1",
+    "deviceId": "1-ICTU"
+  }
+]
+```
+
+Laravel uses:
+
+- `fldId`
+- `fldMacId`
+- `fldDatetime`
+- `fldLog`
+- `fldOfficeId`
+- `deviceId`
+
+The repository sorts this endpoint by `fldId`.
+
+---
+
+## Laravel Flow Summary
+
+This is the current request order used by the Laravel app:
+
+1. Load statuses and offices for the dashboard
+2. Load bios and signatories for the DTR preview
+3. Search logs for the selected month and filters
+
+
